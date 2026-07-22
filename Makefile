@@ -1,5 +1,7 @@
 CXX       := clang++
-CXXFLAGS  := -std=c++23 -Wall -Wextra -Wpedantic -Iinclude -Ivendor/eigen
+CXXFLAGS  := -std=c++23 -Wall -Wextra -Wpedantic
+PUBLIC_CPPFLAGS := -Iinclude
+INTERNAL_CPPFLAGS := $(PUBLIC_CPPFLAGS) -Iprivate -Ivendor/eigen -Ivendor/json/include
 LDFLAGS   := -fuse-ld=lld
 AR        := llvm-ar
 ARFLAGS   := rcs
@@ -35,20 +37,32 @@ $(TARGET): $(OBJECTS)
 
 $(TEST_BIN): $(TEST_OBJECTS) $(TARGET)
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) $(PUBLIC_CPPFLAGS) $(LDFLAGS) $^ -o $@
 
 # Preserve the src/ subdirectory structure inside build/.
+$(BUILD_DIR)/tests/%.o: tests/%.cc
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(PUBLIC_CPPFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/tests/%.o: tests/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(PUBLIC_CPPFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/tests/%.o: tests/%.cxx
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(PUBLIC_CPPFLAGS) -MMD -MP -c $< -o $@
+
 $(BUILD_DIR)/%.o: %.cc
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INTERNAL_CPPFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INTERNAL_CPPFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/%.o: %.cxx
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INTERNAL_CPPFLAGS) -MMD -MP -c $< -o $@
 
 -include $(DEPS)
 -include $(TEST_DEPS)
